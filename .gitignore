@@ -4,6 +4,9 @@
 *.rlib
 *.dll
 
+# vim stuff
+.*.swp
+
 # Executables
 *.exe
 

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use ast::*;
 
@@ -52,7 +53,9 @@ fn check_statement(s : &Statement, func_table : &FunctionContext, context : &mut
             return Ok(None)
         },
         &Statement::Block(ref stmts) => {
-            // TODO: ensure all returns in a block have the same type
+            // TODO: scoped contexts need to occur here
+
+            // TODO: match return types in this function rather than check_function
             for stmt in stmts.iter() {
                 match check_statement(stmt, func_table, context) {
                     Ok(Some(x)) => return Ok(Some(x)),
@@ -60,12 +63,35 @@ fn check_statement(s : &Statement, func_table : &FunctionContext, context : &mut
                     _ => ()
                 }
             }
+
+            return Ok(None);
         },
+        &Statement::Loop(ref stmt) => {
+            return check_statement(&*stmt, func_table, context);
+        },
+        &Statement::Break => {
+            return Ok(None);
+        },
+        &Statement::Input(ref branches) => {
+            let mut keys = HashSet::new();
 
+            for &(ref key, ref arm) in branches.iter() {
+                if !keys.insert(key.clone()) {
+                    return Err(format!("Duplicated branch {:?}", key));
+                }
 
+                // TODO: Check arm returns
+                try!(check_statement(&*arm, func_table, context));
+            }
+            return Ok(None);
+        },
         &Statement::Return(ref expr) => {
+            return Ok(Some(try!(check_expr(&*expr, func_table, context))));
+        },
+        &Statement::Expr(ref expr) => {
+            try!(check_expr(&*expr, func_table, context));
+            return Ok(None);
         }
-        _ => ()
     }
     return Err("woops".to_string())
 }

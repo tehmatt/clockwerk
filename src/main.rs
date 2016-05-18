@@ -66,7 +66,7 @@ fn main() {
     };
 
     if print_ast {
-        println!("{}", ast);
+        print!("{}", ast);
     }
 
     match typechecker::check(ast) {

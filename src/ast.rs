@@ -6,7 +6,7 @@ pub enum ColorType {
     Red, White
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum KeyType {
     W, A, S, D
 }
@@ -36,6 +36,7 @@ pub enum Expr {
     ConstKey(KeyType),
     ConstColor(ColorType),
     ConstString(String),
+    ConstList(Vec<Expr>),
 
     // Variable expressions
     Var(Ident),
@@ -170,6 +171,7 @@ impl fmt::Display for Statement {
                 try!(writeln!(f, "{} {{", Red.paint("input")));
                 indent();
 
+                // TODO: handle printing of single statements
                 for &(ref key, ref arm) in branches {
                     write_indent(f);
                     try!(write!(f, "{:?} => {}", key, arm));
@@ -207,6 +209,21 @@ impl fmt::Display for Expr {
             &Expr::Binop(ref l, ref o, ref r) => write!(f, "({} {} {})", l, o, r),
             &Expr::Unop(ref l, ref o) => write!(f, "{}{}", l, o),
             &Expr::Elem(ref list, ref elem) => write!(f, "{}[{}]", list, elem),
+            &Expr::ConstList(ref elems) => {
+                try!(write!(f, "["));
+
+                let mut first = true;
+                for elem in elems {
+                    if !first {
+                        try!(write!(f, ", "));
+                    }
+
+                    try!(write!(f, "{}", elem));
+                    first = false;
+                }
+
+                write!(f, "]")
+            },
             &Expr::Call(ref name, ref args) => {
                 try!(write!(f, "{}(", Purple.paint(name.to_string())));
 

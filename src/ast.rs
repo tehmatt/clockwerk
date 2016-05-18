@@ -54,6 +54,10 @@ pub enum Statement {
     Loop(Box<Statement>),
     Break,
     Input(Vec<(KeyType, Statement)>),
+    Return(Expr),
+
+    // Side-effects
+    Expr(Expr)
 }
 
 #[derive(Debug)]
@@ -62,4 +66,9 @@ pub struct Function {
     pub name: Ident,
     pub args: Vec<(Type, Ident)>,
     pub body: Statement
+}
+
+#[derive(Debug)]
+pub enum Tree {
+    Functions(Vec<Function>)
 }

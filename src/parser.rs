@@ -1,4 +1,6 @@
 use nom::IResult;
+use nom::Err::Position;
+use nom::ErrorKind;
 use nom::{space, multispace, digit, alpha, alphanumeric};
 use std::str;
 use std::str::FromStr;
@@ -11,7 +13,7 @@ named!(boolean_literals<bool>,
     )
 );
 
-// TODO: Bounds checking
+// TODO: Negatives
 named!(integer_literals<i32>,
    map_res!(
        map_res!(
@@ -109,6 +111,22 @@ named!(idents<String>,
     )
 );
 
+named!(calls<Expr>,
+    chain!(
+        func: idents
+      ~ space?
+      ~ char!('(')
+      ~ multispace?
+      ~ args: separated_list!(
+            delimited!(opt!(multispace), char!(','), opt!(multispace)),
+            exprs
+        )
+      ~ char!(')')
+      ~ multispace?,
+      || Expr::Call(func, args)
+    )
+);
+
 named!(parens<Expr>,
     delimited!(
         chain!(char!('(') ~ multispace?, || ()),
@@ -124,6 +142,7 @@ named!(terms<Expr>,
       | map!(key_literals, |x : KeyType| Expr::ConstKey(x))
       | map!(color_literals, |x : ColorType| Expr::ConstColor(x))
       | map!(string_literals, |x : String| Expr::ConstString(x))
+      | calls
       | map!(idents, |x : Ident| Expr::Var(x))
       | chain!(
             l: idents
@@ -136,16 +155,20 @@ named!(terms<Expr>,
 );
 
 named!(exprs<Expr>,
-    alt!(
-        chain!(
-            l: terms
-          ~ multispace?
-          ~ o: binops
-          ~ multispace?
-          ~ r: exprs,
-            || Expr::Binop(Box::new(l), o, Box::new(r))
-        )
-      | terms
+    delimited!(
+        opt!(multispace),
+        alt!(
+            chain!(
+                l: terms
+              ~ multispace?
+              ~ o: binops
+              ~ multispace?
+              ~ r: exprs,
+                || Expr::Binop(Box::new(l), o, Box::new(r))
+            )
+          | terms
+        ),
+        opt!(multispace)
     )
 );
 
@@ -209,11 +232,18 @@ named!(statements<Statement>,
                     chain!(tag!("break"), || Statement::Break)
                   | declarations
                   | chain!(
+                        tag!("return")
+                      ~ multispace?
+                      ~ expr: exprs,
+                      || Statement::Return(expr)
+                    )
+                  | chain!(
                         l: idents
-                      ~ char!('=')
+                      ~ delimited!(opt!(space), char!('='), opt!(space))
                       ~ r: exprs,
                       || Statement::Assign(l, r)
                     )
+                  | map!(exprs, |x : Expr| Statement::Expr(x))
                 ),
                 preceded!(opt!(space), tag!(";"))
             )
@@ -227,21 +257,32 @@ named!(arguments<(Type, Ident)>,
 
 named!(functions<Function>,
     chain!(
-        ret: types?
-      ~ space
+        ret: terminated!(types, space)?
       ~ name: idents
       ~ space?
-      ~ char!('(')
       ~ args: delimited!(char!('('), separated_list!(char!(','), arguments), char!(')'))
-      ~ body: statements,
+      ~ body: error!(ErrorKind::Custom(0), statements),
       || Function { ret: ret, name: name, args: args, body: body}
     )
 );
 
-pub fn parse(source: &str) -> Result<Function, String> {
-    match functions(source.as_bytes()) {
+// TODO: silently ignores failure when parsing functions - should look for
+// non-spaces and fail if they've been seen
+named!(files<Tree>,
+    map!(
+        many1!(delimited!(opt!(multispace), functions, opt!(multispace))),
+        |x : Vec<Function>| Tree::Functions(x)
+    )
+);
+
+pub fn parse(source: String) -> Result<Tree, String> {
+    match files(source.as_bytes()) {
         IResult::Done(_, t) => Ok(t),
-        IResult::Error(e) => Err(format!("Parse error: {:?}", e)),
+        IResult::Error(e) =>
+            match e {
+                Position(code, bytes) => Err(format!("Parse error at {:?}: {:?}", code, str::from_utf8(bytes).unwrap())),
+                _ => Err(format!("Unformatted error :("))
+            },
         IResult::Incomplete(n) => Err(format!("Parse incomplete: needs {:?}", n))
     }
 }

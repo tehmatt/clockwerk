@@ -5,3 +5,4 @@ authors = ["Matt Bryant <mbryant@programsareproofs.com>"]
 
 [dependencies]
 nom = "*"
+getopts = "0.2"

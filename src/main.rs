@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate nom;
 
+extern crate ansi_term;
 extern crate getopts;
 use getopts::Options;
 
@@ -10,7 +11,7 @@ use std::env;
 
 mod ast;
 mod parser;
-use parser::parse;
+mod typechecker;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options] FILE", program);
@@ -56,12 +57,23 @@ fn main() {
     let mut code = String::new();
     input.read_to_string(&mut code).unwrap();
 
-    let ast = match parse(code) {
+    let ast = match parser::parse(code) {
         Ok(t) => t,
-        Err(s) => panic!("{}", s)
+        Err(s) => {
+            println!("{}", s);
+            return;
+        }
     };
 
     if print_ast {
-        println!("{:?}", ast);
+        println!("{}", ast);
+    }
+
+    match typechecker::check(ast) {
+        Ok(_) => (),
+        Err(s) => {
+            println!("Typechecker error: {}", s);
+            return;
+        }
     }
 }

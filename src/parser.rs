@@ -6,6 +6,9 @@ use std::str;
 use std::str::FromStr;
 use ast::*;
 
+// TODO: parse comments
+// This should include a general whitespace solution also
+
 named!(boolean_literals<bool>,
     alt!(
         chain!(tag!("true"), || true)
@@ -14,7 +17,7 @@ named!(boolean_literals<bool>,
 );
 
 // TODO: Negatives
-named!(integer_literals<i32>,
+named!(integer_literals<u32>,
    map_res!(
        map_res!(
            digit,
@@ -83,7 +86,7 @@ named!(types<Type>,
             )?,
             || match bounds {
                 Some((low, high)) => Type::Int(low, high),
-                None => Type::Int(0, i32::max_value())
+                None => Type::Int(0, u32::max_value())
             }
         )
       | chain!(tag!("color"), || Type::Color)
@@ -138,7 +141,7 @@ named!(parens<Expr>,
 named!(terms<Expr>,
     alt!(
         map!(boolean_literals, |x : bool| Expr::ConstBool(x))
-      | map!(integer_literals, |x : i32| Expr::ConstInt(x))
+      | map!(integer_literals, |x : u32| Expr::ConstInt(x))
       | map!(key_literals, |x : KeyType| Expr::ConstKey(x))
       | map!(color_literals, |x : ColorType| Expr::ConstColor(x))
       | map!(string_literals, |x : String| Expr::ConstString(x))
@@ -252,7 +255,11 @@ named!(statements<Statement>,
 );
 
 named!(arguments<(Type, Ident)>,
-    separated_pair!(types, space, idents)
+    delimited!(
+        opt!(multispace),
+        separated_pair!(types, space, idents),
+        opt!(multispace)
+    )
 );
 
 named!(functions<Function>,
@@ -268,14 +275,14 @@ named!(functions<Function>,
 
 // TODO: silently ignores failure when parsing functions - should look for
 // non-spaces and fail if they've been seen
-named!(files<Tree>,
+named!(files<AST>,
     map!(
         many1!(delimited!(opt!(multispace), functions, opt!(multispace))),
-        |x : Vec<Function>| Tree::Functions(x)
+        |x : Vec<Function>| AST(x)
     )
 );
 
-pub fn parse(source: String) -> Result<Tree, String> {
+pub fn parse(source: String) -> Result<AST, String> {
     match files(source.as_bytes()) {
         IResult::Done(_, t) => Ok(t),
         IResult::Error(e) =>

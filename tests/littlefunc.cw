@@ -1,4 +1,4 @@
-main() {
+int main() {
     string x = "hello world";
-    x = say(x);
+    return 1;
 }

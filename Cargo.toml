@@ -1,0 +1,7 @@
+[package]
+name = "clockwerk"
+version = "0.1.0"
+authors = ["Matt Bryant <mbryant@programsareproofs.com>"]
+
+[dependencies]
+nom = "*"

@@ -4,6 +4,13 @@ use std::str;
 use std::str::FromStr;
 use ast::*;
 
+named!(boolean_literals<bool>,
+    alt!(
+        chain!(tag!("true"), || true)
+      | chain!(tag!("false"), || false)
+    )
+);
+
 // TODO: Bounds checking
 named!(integer_literals<i32>,
    map_res!(
@@ -112,10 +119,11 @@ named!(parens<Expr>,
 
 named!(terms<Expr>,
     alt!(
-        map!(string_literals, |x : String| Expr::ConstString(x))
+        map!(boolean_literals, |x : bool| Expr::ConstBool(x))
       | map!(integer_literals, |x : i32| Expr::ConstInt(x))
       | map!(key_literals, |x : KeyType| Expr::ConstKey(x))
       | map!(color_literals, |x : ColorType| Expr::ConstColor(x))
+      | map!(string_literals, |x : String| Expr::ConstString(x))
       | map!(idents, |x : Ident| Expr::Var(x))
       | chain!(
             l: idents
@@ -200,6 +208,12 @@ named!(statements<Statement>,
                 alt!(
                     chain!(tag!("break"), || Statement::Break)
                   | declarations
+                  | chain!(
+                        l: idents
+                      ~ char!('=')
+                      ~ r: exprs,
+                      || Statement::Assign(l, r)
+                    )
                 ),
                 preceded!(opt!(space), tag!(";"))
             )
@@ -207,8 +221,25 @@ named!(statements<Statement>,
     )
 );
 
-pub fn parse(source: &str) -> Result<Statement, String> {
-    match statements(source.as_bytes()) {
+named!(arguments<(Type, Ident)>,
+    separated_pair!(types, space, idents)
+);
+
+named!(functions<Function>,
+    chain!(
+        ret: types?
+      ~ space
+      ~ name: idents
+      ~ space?
+      ~ char!('(')
+      ~ args: delimited!(char!('('), separated_list!(char!(','), arguments), char!(')'))
+      ~ body: statements,
+      || Function { ret: ret, name: name, args: args, body: body}
+    )
+);
+
+pub fn parse(source: &str) -> Result<Function, String> {
+    match functions(source.as_bytes()) {
         IResult::Done(_, t) => Ok(t),
         IResult::Error(e) => Err(format!("Parse error: {:?}", e)),
         IResult::Incomplete(n) => Err(format!("Parse incomplete: needs {:?}", n))

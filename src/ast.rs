@@ -27,27 +27,39 @@ pub type Ident = String;
 
 #[derive(Debug)]
 pub enum Expr {
-    ConstString(String),
+    // Constants
+    ConstBool(bool),
     ConstInt(i32),
     ConstKey(KeyType),
     ConstColor(ColorType),
+    ConstString(String),
+
+    // Variable expressions
     Var(Ident),
     Binop(Box<Expr>, OpType, Box<Expr>),
-    Unop(Ident, OpType)
+    Unop(Ident, OpType),
+
+    Call(Ident, Vec<Expr>)
 }
 
 #[derive(Debug)]
 pub enum Statement {
-    // Declarations
+    // Declarations and modifications
     Mutable(Type, Ident, Expr),
     Const(Type, Ident, Expr),
+    Assign(Ident, Expr),
 
     // Control flow
     Block(Vec<Statement>),
     Loop(Box<Statement>),
     Break,
     Input(Vec<(KeyType, Statement)>),
+}
 
-    // Variable modifications
-    Assign(Ident, Expr),
+#[derive(Debug)]
+pub struct Function {
+    pub ret: Option<Type>,
+    pub name: Ident,
+    pub args: Vec<(Type, Ident)>,
+    pub body: Statement
 }

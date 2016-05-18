@@ -8,7 +8,7 @@ use parser::parse;
 
 fn main() {
     let test1 =
-"{
+"main() {
     string x = \"hello\";
     list<int<0, 6>> x = 10;
     loop {
@@ -20,6 +20,7 @@ fn main() {
             A => {
                 loop {
                     list<list<list<string>>> whatabigtype = 10;
+                    whatabigtype = 4;
                 }
             }
         }

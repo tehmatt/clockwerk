@@ -6,37 +6,37 @@ pub enum ColorType {
     Red, White
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum KeyType {
     W, A, S, D
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy)]
 pub enum OpType {
-    Plus, Minus, UPlus, UMinus
+    Plus, Minus, Times, UPlus, UMinus
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Type {
+    Bottom,
     Bool,
-    Int(u32, u32),
+    Int(u16, u16), // TODO: ensure low < high
     Color,
     Key,
     Printable,
-    List(Box<Type>)
+    PrintableList(u16)
 }
 
 pub type Ident = String;
 
-#[derive(Debug)]
 pub enum Expr {
     // Constants
     ConstBool(bool),
-    ConstInt(u32),
+    ConstInt(u16),
     ConstKey(KeyType),
     ConstColor(ColorType),
     ConstString(String),
-    ConstList(Vec<Expr>),
+    ConstList(Vec<String>),
 
     // Variable expressions
     Var(Ident),
@@ -47,7 +47,6 @@ pub enum Expr {
     Elem(Box<Expr>, Box<Expr>)
 }
 
-#[derive(Debug)]
 pub enum Statement {
     // Declarations and modifications
     Mutable(Type, Ident, Expr),
@@ -65,7 +64,6 @@ pub enum Statement {
     Expr(Expr)
 }
 
-#[derive(Debug)]
 pub struct Function {
     pub ret: Option<Type>,
     pub name: Ident,
@@ -140,7 +138,7 @@ impl fmt::Display for Statement {
         match self {
             &Statement::Mutable(ref typ, ref name, ref expr) => {
                 write_indent(f);
-                writeln!(f, "mut {} {} = {};", typ, Cyan.paint(name.to_string()), expr)
+                writeln!(f, "{} {} {} = {};", Red.paint("mut"), typ, Cyan.paint(name.to_string()), expr)
             },
             &Statement::Const(ref typ, ref name, ref expr) => {
                 write_indent(f);
@@ -218,7 +216,7 @@ impl fmt::Display for Expr {
                         try!(write!(f, ", "));
                     }
 
-                    try!(write!(f, "{}", elem));
+                    try!(write!(f, "\"{}\"", Green.paint(elem.to_string())));
                     first = false;
                 }
 
@@ -246,12 +244,13 @@ impl fmt::Display for Expr {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", Yellow.paint(match self {
+            &Type::Bottom => "".to_string(),
             &Type::Bool => "bool".to_string(),
             &Type::Color => "color".to_string(),
             &Type::Key => "key".to_string(),
             &Type::Printable => "string".to_string(),
             &Type::Int(ref low, ref high) => format!("int<{}, {}>", low, high),
-            &Type::List(ref t) => format!("list<{}>", t)
+            &Type::PrintableList(ref len) => format!("string<{}>", len)
         }))
     }
 }
@@ -261,6 +260,7 @@ impl fmt::Display for OpType {
         write!(f, "{}", match self {
             &OpType::Plus => "+",
             &OpType::Minus => "+",
+            &OpType::Times => "+",
             &OpType::UPlus => "++",
             &OpType::UMinus => "--"
         })

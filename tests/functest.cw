@@ -1,5 +1,5 @@
 string yolo(string x, int y) {
-    return x + "swag";
+    return "ll";
 }
 
 int bar() {
@@ -7,7 +7,7 @@ int bar() {
 }
 
 main() {
-    int x = 5;
+    mut int x = 5;
     x = 7;
 }
 

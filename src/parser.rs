@@ -17,7 +17,7 @@ named!(boolean_literals<bool>,
 );
 
 // TODO: Negatives
-named!(integer_literals<u32>,
+named!(integer_literals<u16>,
    map_res!(
        map_res!(
            digit,
@@ -57,10 +57,19 @@ named!(color_literals<ColorType>,
     )
 );
 
+named!(string_lists<Vec<String> >,
+    delimited!(
+        char!('['),
+        separated_list!(delimited!(opt!(multispace), char!(','), opt!(multispace)), string_literals),
+        char!(']')
+    )
+);
+
 named!(binops<OpType>,
     alt!(
         chain!(tag!("+"), || OpType::Plus)
       | chain!(tag!("-"), || OpType::Minus)
+      | chain!(tag!("*"), || OpType::Times)
     )
 );
 
@@ -86,14 +95,14 @@ named!(types<Type>,
             )?,
             || match bounds {
                 Some((low, high)) => Type::Int(low, high),
-                None => Type::Int(0, u32::max_value())
+                None => Type::Int(0, u16::max_value())
             }
         )
       | chain!(tag!("color"), || Type::Color)
       | chain!(tag!("key"), || Type::Key)
+      | map!(delimited!(tag!("string<"), integer_literals, tag!(">")), |x : u16| Type::PrintableList(x))
       | chain!(tag!("string"), || Type::Printable)
       | chain!(tag!("bool"), || Type::Bool)
-      | map!(preceded!(tag!("list<"), terminated!(types, tag!(">"))), |x : Type| Type::List(Box::new(x)))
     )
 );
 
@@ -141,10 +150,11 @@ named!(parens<Expr>,
 named!(terms<Expr>,
     alt!(
         map!(boolean_literals, |x : bool| Expr::ConstBool(x))
-      | map!(integer_literals, |x : u32| Expr::ConstInt(x))
+      | map!(integer_literals, |x : u16| Expr::ConstInt(x))
       | map!(key_literals, |x : KeyType| Expr::ConstKey(x))
       | map!(color_literals, |x : ColorType| Expr::ConstColor(x))
       | map!(string_literals, |x : String| Expr::ConstString(x))
+      | map!(string_lists, |x : Vec<String>| Expr::ConstList(x))
       | calls
       | map!(idents, |x : Ident| Expr::Var(x))
       | chain!(
@@ -167,7 +177,13 @@ named!(exprs<Expr>,
               ~ o: binops
               ~ multispace?
               ~ r: exprs,
-                || Expr::Binop(Box::new(l), o, Box::new(r))
+              || Expr::Binop(Box::new(l), o, Box::new(r))
+            )
+          | chain!(
+                list: terms
+              ~ multispace?
+              ~ index: delimited!(char!('['), exprs, char!(']')),
+              || Expr::Elem(Box::new(list), Box::new(index))
             )
           | terms
         ),
@@ -177,7 +193,7 @@ named!(exprs<Expr>,
 
 named!(declarations<Statement>,
     chain!(
-        mutable: opt!(tag!("mut"))
+        mutable: opt!(terminated!(tag!("mut"), space))
       ~ typ: types
       ~ space
       ~ name: idents

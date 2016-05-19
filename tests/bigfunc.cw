@@ -1,23 +1,23 @@
 main() {
     string x = "hello";
-    list<int<0, 6>> x = 10;
+    string y = "world";
+	string<5> z = ["this", "is", "a", "test", "case"];
+
     loop {
-        list<int> x = 6;
-        string x = 5+( 6+7+8)+9;
+        int<0,16> a = 6;
+        int b = 5+( 6+7+8)+9;
+        z[4];
 
         input {
             W => { }
             A => {
                 loop {
-                    list<list<list<string>>> whatabigtype = 10;
-                    whatabigtype = 4;
-                    y = yolo(x);
                 }
             }
         }
     }
 
-    int<0, 124567924> x = 3;
+    int<0, 65535> w = 3;
 }
 
 string yolo(string x) {

@@ -21,8 +21,8 @@ fn subtype(t1 : &Type, t2 : &Type) -> bool {
 fn check_expr(e : &Expr, func_table : &FunctionContext, context : &VariableContext) -> Result<Type, String> {
     match e {
         &Expr::ConstBool(_) => Ok(Type::Bool),
-        &Expr::ConstInt(x) => if x == u16::max_value() {
-            Err(format!("Integer constants must be less than {}", u16::max_value()))
+        &Expr::ConstInt(x) => if x == u8::max_value() {
+            Err(format!("Integer constants must be less than {}", u8::max_value()))
         } else {
             Ok(Type::Int(0, x + 1))
         },
@@ -30,10 +30,10 @@ fn check_expr(e : &Expr, func_table : &FunctionContext, context : &VariableConte
         &Expr::ConstColor(_) => Ok(Type::Color),
         &Expr::ConstString(_) => Ok(Type::Printable),
         &Expr::ConstList(ref elems) => {
-            if elems.len() > (u16::max_value() as usize) {
-                Err(format!("Lists must contain less than {} elements", u16::max_value()))
+            if elems.len() > (u8::max_value() as usize) {
+                Err(format!("Lists must contain less than {} elements", u8::max_value()))
             } else {
-                Ok(Type::PrintableList(elems.len() as u16))
+                Ok(Type::PrintableList(elems.len() as u8))
             }
         },
         &Expr::Var(ref name) => {
@@ -162,9 +162,6 @@ fn check_statement(s : &Statement, func_table : &FunctionContext, context : &mut
             }
 
             return Ok(None);
-        },
-        &Statement::Loop(ref stmt) => {
-            return check_statement(&*stmt, func_table, context);
         },
         &Statement::Break => {
             return Ok(None);

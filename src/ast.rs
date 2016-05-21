@@ -20,11 +20,11 @@ pub enum OpType {
 pub enum Type {
     Bottom,
     Bool,
-    Int(u16, u16), // TODO: ensure low < high
+    Int(u8, u8), // TODO: ensure low < high
     Color,
     Key,
     Printable,
-    PrintableList(u16)
+    PrintableList(u8)
 }
 
 pub type Ident = String;
@@ -32,7 +32,7 @@ pub type Ident = String;
 pub enum Expr {
     // Constants
     ConstBool(bool),
-    ConstInt(u16),
+    ConstInt(u8),
     ConstKey(KeyType),
     ConstColor(ColorType),
     ConstString(String),
@@ -55,7 +55,6 @@ pub enum Statement {
 
     // Control flow
     Block(Vec<Statement>),
-    Loop(Box<Statement>),
     Break,
     Input(Vec<(KeyType, Statement)>),
     Return(Expr),
@@ -159,10 +158,6 @@ impl fmt::Display for Statement {
                 undent();
                 write_indent(f);
                 writeln!(f, "}}")
-            },
-            &Statement::Loop(ref stmt) => {
-                write_indent(f);
-                writeln!(f, "{} {}", Red.paint("loop"), stmt)
             },
             &Statement::Input(ref branches) => {
                 write_indent(f);

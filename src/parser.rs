@@ -17,7 +17,7 @@ named!(boolean_literals<bool>,
 );
 
 // TODO: Negatives
-named!(integer_literals<u16>,
+named!(integer_literals<u8>,
    map_res!(
        map_res!(
            digit,
@@ -95,12 +95,12 @@ named!(types<Type>,
             )?,
             || match bounds {
                 Some((low, high)) => Type::Int(low, high),
-                None => Type::Int(0, u16::max_value())
+                None => Type::Int(0, u8::max_value())
             }
         )
       | chain!(tag!("color"), || Type::Color)
       | chain!(tag!("key"), || Type::Key)
-      | map!(delimited!(tag!("string<"), integer_literals, tag!(">")), |x : u16| Type::PrintableList(x))
+      | map!(delimited!(tag!("string<"), integer_literals, tag!(">")), |x : u8| Type::PrintableList(x))
       | chain!(tag!("string"), || Type::Printable)
       | chain!(tag!("bool"), || Type::Bool)
     )
@@ -150,7 +150,7 @@ named!(parens<Expr>,
 named!(terms<Expr>,
     alt!(
         map!(boolean_literals, |x : bool| Expr::ConstBool(x))
-      | map!(integer_literals, |x : u16| Expr::ConstInt(x))
+      | map!(integer_literals, |x : u8| Expr::ConstInt(x))
       | map!(key_literals, |x : KeyType| Expr::ConstKey(x))
       | map!(color_literals, |x : ColorType| Expr::ConstColor(x))
       | map!(string_literals, |x : String| Expr::ConstString(x))
@@ -232,11 +232,6 @@ named!(statements<Statement>,
               ~ multispace?
               ~ tag!("}"),
               || Statement::Block(statements)
-            )
-          | chain!( // Loops
-                tag!("loop")
-              ~ statements: statements,
-              || Statement::Loop(Box::new(statements))
             )
           | chain!(
                 tag!("input")
